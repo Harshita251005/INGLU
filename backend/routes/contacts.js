@@ -3,7 +3,8 @@ import {
   getContacts,
   createContact,
   updateContact,
-  deleteContact
+  deleteContact,
+  toggleFavorite
 } from '../controllers/contactController.js';
 
 const router = express.Router();
@@ -15,5 +16,8 @@ router.route('/')
 router.route('/:id')
   .put(updateContact)
   .delete(deleteContact);
+
+router.route('/:id/favorite')
+  .patch(toggleFavorite);
 
 export default router;

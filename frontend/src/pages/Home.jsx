@@ -10,13 +10,14 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
   const [editingContact, setEditingContact] = useState(null);
 
-  const fetchContacts = useCallback(async (searchQuery = '') => {
+  const fetchContacts = useCallback(async (searchQuery = '', catQuery = '') => {
     setLoading(true);
     try {
       const { data } = await api.get('/contacts', {
-        params: { search: searchQuery }
+        params: { search: searchQuery, category: catQuery || undefined }
       });
       setContacts(data);
       setError(null);
@@ -32,11 +33,11 @@ const Home = () => {
   useEffect(() => {
     // Debounce search
     const delayDebounceFn = setTimeout(() => {
-      fetchContacts(search);
+      fetchContacts(search, category);
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, fetchContacts]);
+  }, [search, category, fetchContacts]);
 
   const handleSaveContact = async (contactData, id = null) => {
     try {
@@ -76,6 +77,27 @@ const Home = () => {
     setEditingContact(null);
   };
 
+  const handleToggleFavorite = async (id, currentStatus) => {
+    // Optimistic update
+    setContacts(contacts.map(c => 
+      c._id === id ? { ...c, isFavorite: !currentStatus } : c
+    ));
+
+    try {
+      await api.patch(`/contacts/${id}/favorite`);
+      // Since backend controls sorting, we probably want to re-fetch if we care about immediate reordering.
+      // For this implementation, the backend does reorder, but we can do a quick re-fetch to keep it synced.
+      fetchContacts(search, category);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update favorite status');
+      // Revert optimistic update
+      setContacts(contacts.map(c => 
+        c._id === id ? { ...c, isFavorite: currentStatus } : c
+      ));
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
       <div className="md:col-span-1">
@@ -87,17 +109,31 @@ const Home = () => {
       </div>
 
       <div className="md:col-span-3">
-        <div className="mb-4 relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FiSearch className="text-gray-400" />
+        <div className="mb-4 flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FiSearch className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+              placeholder="Search contacts by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-            placeholder="Search contacts by name or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="w-full sm:w-48">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white"
+            >
+              <option value="">All Categories</option>
+              <option value="Personal">Personal</option>
+              <option value="Work">Work</option>
+              <option value="Family">Family</option>
+            </select>
+          </div>
         </div>
 
         {error && (
@@ -120,6 +156,7 @@ const Home = () => {
             contacts={contacts} 
             onEdit={setEditingContact} 
             onDelete={handleDeleteContact} 
+            onToggleFavorite={handleToggleFavorite}
           />
         )}
       </div>

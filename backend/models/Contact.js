@@ -17,10 +17,19 @@ const contactSchema = new mongoose.Schema({
   phone: {
     type: String
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  isFavorite: {
+    type: Boolean,
+    default: false
+  },
+  category: {
+    type: String,
+    enum: ['Work', 'Personal', 'Family'],
+    default: 'Personal'
+  },
+  notes: {
+    type: String,
+    maxlength: [500, 'Notes cannot be more than 500 characters']
   }
-});
+}, { timestamps: true });
 
 export default mongoose.model('Contact', contactSchema);

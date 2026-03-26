@@ -4,7 +4,10 @@ This is a full-stack Contact Management Web Application built with the MERN stac
 
 ## Features
 - **CRUD Operations**: Create, Read, Update, and Delete contacts.
-- **Search**: Instantly filter contacts by name or email.
+- **Advanced Search & Filtering**: Instantly search contacts by name or email, and combine queries with category filters.
+- **Categorization**: Group contacts into 'Work', 'Personal', and 'Family' with colored visual badges.
+- **Favorites**: "Star" important contacts to keep them prioritized at the top of your list.
+- **Notes & Timestamps**: Store additional details for each contact and track when they were last updated.
 - **Notifications**: Toast notifications for success and error interactions.
 - **Responsive UI**: Built with Tailwind CSS.
 - **API Validation**: Backend safeguards for required fields and unique emails.

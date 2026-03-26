@@ -5,20 +5,24 @@ import Contact from '../models/Contact.js';
 // @access  Public
 export const getContacts = async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, category } = req.query;
     
     // Build search query if provided string
     let query = {};
+    
     if (search) {
-      query = {
-        $or: [
-          { name: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } }
-        ]
-      };
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (category) {
+      query.category = category;
     }
 
-    const contacts = await Contact.find(query).sort({ createdAt: -1 });
+    // Sort by favorite first, then alphabetically by name
+    const contacts = await Contact.find(query).collation({ locale: 'en' }).sort({ isFavorite: -1, name: 1 });
     res.status(200).json(contacts);
   } catch (error) {
     res.status(500).json({ message: 'Server Error: Could not fetch contacts', error: error.message });
@@ -30,7 +34,7 @@ export const getContacts = async (req, res) => {
 // @access  Public
 export const createContact = async (req, res) => {
   try {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, category, notes, isFavorite } = req.body;
 
     if (!name || !email) {
       return res.status(400).json({ message: 'Please provide both name and email' });
@@ -45,7 +49,10 @@ export const createContact = async (req, res) => {
     const contact = await Contact.create({
       name,
       email,
-      phone
+      phone,
+      category,
+      notes,
+      isFavorite: isFavorite || false
     });
 
     res.status(201).json(contact);
@@ -63,7 +70,7 @@ export const createContact = async (req, res) => {
 export const updateContact = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone } = req.body;
+    const { name, email, phone, category, notes } = req.body;
 
     let contact = await Contact.findById(id);
 
@@ -73,7 +80,7 @@ export const updateContact = async (req, res) => {
 
     contact = await Contact.findByIdAndUpdate(
       id,
-      { name, email, phone },
+      { name, email, phone, category, notes },
       { new: true, runValidators: true }
     );
 
@@ -107,5 +114,30 @@ export const deleteContact = async (req, res) => {
       return res.status(404).json({ message: 'Contact not found' });
     }
     res.status(500).json({ message: 'Server Error: Could not delete contact', error: error.message });
+  }
+};
+
+// @desc    Toggle favorite status
+// @route   PATCH /api/contacts/:id/favorite
+// @access  Public
+export const toggleFavorite = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const contact = await Contact.findById(id);
+
+    if (!contact) {
+      return res.status(404).json({ message: 'Contact not found' });
+    }
+
+    contact.isFavorite = !contact.isFavorite;
+    await contact.save();
+
+    res.status(200).json(contact);
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({ message: 'Contact not found' });
+    }
+    res.status(500).json({ message: 'Server Error: Could not toggle favorite', error: error.message });
   }
 };
